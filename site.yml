@@ -1,0 +1,45 @@
+--- # Master palybook for Hadoop Deployment Ansible
+
+- name: Run the Pre-requisites for all the nodes
+  hosts: all
+  tasks:
+  - import_role:
+      name: prereq
+  tags: prereq
+
+- hosts: all
+  vars_prompt:
+    - name: "selected_version"
+      prompt: "Which version Do you want to install? 5.5 or 5.6"
+      private: no
+  roles: 
+    - {
+        role: database,
+        version: "{{ selected_version }}",
+      }
+  tags: database
+
+- name: Setup Cloudera Repo for CDH distribution
+  hosts: all
+  tasks:
+  - import_role:
+      name: cmrepo
+    when: distribution_type == "cdh"
+  tags: cmrepo
+
+- name: Install Cloudera Manager Agent
+  hosts: all
+  tasks:
+  - import_role:
+      name: cmagents
+    when: distribution_type == "cdh"
+  tags: cmagents
+
+- name: Install Cloudera Manager Server
+  hosts: cmserver
+  tasks:
+  - import_role:
+      name: cmserver
+    when: distribution_type == "cdh"
+  tags: cmserver
+

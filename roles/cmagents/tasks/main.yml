@@ -1,0 +1,14 @@
+---
+- name: Install Cloudera Manager Agent (yum)
+  yum: name=cloudera-manager-agent update_cache=yes state=present
+  when: ansible_os_family == "RedHat"
+
+- name: Intall libselinux-python package to modify the cloudera config file
+  yum: name=libselinux-python state=present
+  when: ansible_os_family == "RedHat"
+
+- name: Modify cloudera-scm-agent config file
+  lineinfile: path=/etc/cloudera-scm-agent/config.ini regexp=^server_host line=server_host={{ cm_server_hostname }}
+
+- name: Enable and Start the cloudera manager agent service
+  service: name=cloudera-scm-agent state=started enabled=yes

@@ -1,0 +1,72 @@
+---
+- name: Add mysql yum repository
+  yum_repository:
+    name: mysql-repository
+    description: mysql repository
+    baseurl: http://repo.mysql.com/yum/mysql-{{ version }}-community/el/{{ ansible_distribution_major_version }}/$basearch/
+    gpgkey: http://repo.mysql.com/RPM-GPG-KEY-mysql
+    gpgcheck: yes
+    enabled: yes
+
+- name: update packages
+  yum:
+    name: '*'
+    state: latest
+
+- name: install mysql community server
+  yum:
+    name: mysql-server
+    state: present
+
+- name: Install MySQL-python, this is required for the task remove anonymous user
+  yum: 
+    name: MySQL-python 
+    state: latest
+- name: config mysql for Cloudera manager
+  template:
+    src: my.cnf
+    dest: /etc/my.cnf
+- name: Start MySQL Server and enable it
+  service: 
+    name: mysqld 
+    state: started 
+    enabled: yes
+- name: setting up root password for mysql
+  mysql_user: 
+    name: root 
+    password: itversity
+    state: present
+    
+- name: Remove Test database if it exist.
+  mysql_db:
+    name: test
+    state: absent
+    login_user: root
+    login_password: itversity
+
+- name: Remove All Anonymous User Accounts
+  mysql_user: 
+    name: ''
+    host_all: yes
+    state: absent
+    login_user: root
+    login_password: itversity
+
+- name: copy database script
+  copy:
+    src: files/setup_db.sql
+    dest: /home/admin/
+
+- name: create databases and user for cloudera 
+  mysql_db:
+     name: all
+     state: import
+     target: /home/admin/setup_db.sql
+     login_user: root
+     login_password: itversity
+- name: remove script file
+  file:
+    name: setup_db.sql
+    path: /home/admin/
+    state: absent
+    

@@ -1,0 +1,12 @@
+
+[mysqld]
+# replication config START
+#server-id=$(printf '%d\n' "0x$(hostid)")
+#log-bin=mysql-bin
+#relay-log=mysql-relay-bin
+#expire_logs_days=10
+#sync_binlog=1
+# For MySQL version 5.1.8 or later. Comment out binlog_format for older versions.
+#binlog_format = mixed
+# replication config END
+#innodb_flush_log_at_trx_commit=1

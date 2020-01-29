@@ -1,0 +1,4 @@
+properties.yml
+#Ignoring Mac files
+.DS_Store
+*.bkp

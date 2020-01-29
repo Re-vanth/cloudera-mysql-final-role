@@ -1,0 +1,16 @@
+[all]
+slave02.itversity.com ansible_user=admin
+
+#192.168.100.90
+#192.168.100.91
+#192.168.100.92
+
+#[gateway]
+#192.168.100.90
+
+#[database]
+#192.168.100.90
+
+#[cmserver]
+#192.168.100.90
+

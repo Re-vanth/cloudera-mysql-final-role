@@ -1,0 +1,27 @@
+---
+- name: Getting all the variables
+  include_vars: ../../../../group_vars/all.yml
+  ignore_errors:  true
+
+- name: Add Cloudera Manager yum repository
+  yum_repository:
+    name: cloudera-manager
+    description: Cloudera Manager
+    baseurl: "{{ scm_repo_url }}"
+    gpgkey: "{{ scm_repo_gpgkey }}"
+    gpgcheck: yes
+    enabled: yes
+  when: ansible_os_family == "RedHat" 
+
+
+
+
+
+
+
+
+
+
+
+
+

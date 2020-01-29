@@ -1,0 +1,10 @@
+---
+- name: Getting all the variables
+  include_vars: ../../../group_vars/all.yml
+  include_vars: ../../../group_vars/db.yml
+  ignore_errors: true
+
+- name: Include mysql.yml when database is mysql
+  import_tasks: mysql.yml
+  when: database_type == "mysql"
+

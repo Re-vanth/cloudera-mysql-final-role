@@ -1,0 +1,141 @@
+---
+
+- name: Ensure required packages are installed (yum)
+  yum:
+    name: "{{ redhat_packages }}"
+    update_cache: yes
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: download the tar file of  mysql_jdbc driver
+  unarchive:
+    src: https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-5.1.46.tar.gz
+    dest: /home/{{ ansible_control_node_user }}
+    remote_src: true
+
+- name: create a directory  name java
+  file:
+    dest: /usr/share/java
+    state: directory
+
+- name: copy the bin.jar file to /usr/share/java
+  command: cp /home/{{ ansible_control_node_user }}/mysql-connector-java-5.1.46/mysql-connector-java-5.1.46-bin.jar /usr/share/java/mysql-connector-java.jar
+
+- name: copy the bin.jar file to /usr/share/java
+  command: cp /home/{{ ansible_control_node_user }}/mysql-connector-java-5.1.46/mysql-connector-java-5.1.46-bin.jar /usr/share/java/mysql-connector-java.jar
+
+- name: Copy swappiness file to /etc/sysctl.d/
+  copy: src=cloudera_swappiness.conf dest=/etc/sysctl.d/ mode=0644
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "7"
+
+- name: Disable on firewalld on boot
+  service: name=firewalld enabled=no
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat"
+
+- name: Stop Firewalld
+  service: name=firewalld state=stopped
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat"
+
+- name: Started tuned service
+  service: name=tuned state=started
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat"
+
+- name: Copy the hadoop tuned profile
+  copy: src=tuned.conf dest=/etc/tuned/hadoop/ mode=0644
+  when: ansible_os_family == "RedHat"
+
+- name: Creating hadoop virtual directory
+  file: path=/etc/tuned/hadoop-virtual state=directory
+  when: ansible_os_family == "RedHat"
+
+- name: Copy the hadoop virtual tuned profile
+  copy: src=hadoop-virtual-tuned.conf dest=/etc/tuned/hadoop-virtual/tuned.conf mode=0644
+  when: ansible_os_family == "RedHat"
+
+- name: Installing Name Service Caching Daemon in Redhat based system
+  yum: pkg=nscd state=present
+  notify: nscd is installed
+  when: ansible_os_family == "RedHat"
+
+- name: Enable Name Service Caching Daemon
+  service: name=nscd enabled=yes
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat"
+
+- name: Install OpenJDK Java in Redhat
+  yum: pkg=java-1.8.0-openjdk state=present
+  when: ansible_os_family == "RedHat"
+  tags: set_java_home
+
+- name: Removing Chrony service in Redhat
+  yum: name=chronyd state=absent
+  when: ansible_os_family == "RedHat"
+
+- name: Start and enable the NTP service
+  service: name=ntpd state=started enabled=yes
+  when: ansible_os_family == "RedHat"
+  changed_when: false
+
+- name: Disable THP support by adding scripts to rc.local
+  lineinfile:
+    path: /etc/rc.d/rc.local
+    regexp: 'echo never'
+    line: |
+      echo never > /sys/kernel/mm/transparent_hugepage/enabled
+      echo never > /sys/kernel/mm/transparent_hugepage/defrag
+    state: present
+    backrefs: yes
+  when: ansible_os_family == "RedHat"
+
+- name: Change permissions of /etc/rc.d/rc.local to make it run on boot
+  file: dest=/etc/rc.d/rc.local mode=a+x
+  when: ansible_os_family == "RedHat"
+  notify: Restart rc-local
+
+- name: Disable SELinux
+  selinux: state=disabled
+  ignore_errors: yes
+  register: task_result
+
+- name: Reboot immediately if there was a change.
+  shell: "sleep 5 && reboot"
+  async: 1
+  poll: 0
+  when: task_result is changed
+
+- name: Wait for the reboot to complete if there was a change.
+  wait_for_connection:
+    connect_timeout: 20
+    sleep: 5
+    delay: 5
+    timeout: 300
+  when: task_result is changed
+
+- name: Ensure haveged packages are installed (yum)
+  yum:
+    name: haveged
+    update_cache: yes
+    state: present
+  when: usehaveged
+
+- name: Start and enable the NTP service in Debian systems
+  service: name=haveged state=started enabled=yes
+  when: usehaveged
+
+- name: Ensure rng-tools packages are installed (yum)
+  yum:
+    name: rng-tools
+    update_cache: yes
+    state: present
+  when: not usehaveged
+
+- name: just force systemd to reread configs (2.4 and above)
+  systemd:
+    daemon_reload: yes
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution_major_version | int >= 7
+

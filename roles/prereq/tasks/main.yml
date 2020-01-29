@@ -1,0 +1,92 @@
+---
+# Setting up pre-requisites
+
+- name: Getting all the variables
+  include_vars: ../../../group_vars/all.yml
+  ignore_errors: true
+
+- name: adding the hostnames in /etc/hosts
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+
+- name: Create directories
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - ["/data1","/data2"]
+
+- name: Create a ext4 filesystem and check disk blocks
+  filesystem:
+    fstype: "{{ item.fstype }}"
+    dev: "{{ item.dev }}"
+  with_items:
+    - { fstype: ext4, dev: "{{ disk1 }}" }
+    - { fstype: ext4, dev: "{{ disk2 }}" }
+
+- name: Mount the disks
+  mount:
+    path: "{{ item.path }}"
+    src: "{{ item.src }}"
+    fstype: "{{ item.fstype }}"
+    state: mounted
+  with_items:
+        - { path: /data1, src: "{{ disk1 }}", fstype: ext4 }
+        - { path: /data2, src: "{{ disk2 }}", fstype: ext4 }
+
+- name: Set vm.swappiness to {{ swappiness_value }}
+  sysctl: name=vm.swappiness value={{ swappiness_value }} state=present
+  ignore_errors: yes
+
+- name: Stop iptables
+  service: name=iptables state=stopped
+  ignore_errors: yes
+
+- name: Disable on iptables on boot
+  service: name=iptables enabled=no
+  ignore_errors: yes
+
+- name: Disabling IPv6 kernel configuration
+  sysctl: name=net.ipv6.conf.all.disable_ipv6 value=1 state=present
+  ignore_errors: yes
+
+- name: Tune kernel
+  sysctl: name={{ item.value.name }} value={{ item.value.value }} state=present
+  with_dict: "{{ tune_kernel }}"
+  ignore_errors: yes
+
+- name: Disabling IPv6 kernel configuration
+  sysctl: name=net.ipv6.conf.default.disable_ipv6 value=1 state=present
+  ignore_errors: yes
+
+- name: Check if rdrand is there in cpuinfo
+  command: grep -q rdrand /proc/cpuinfo
+  ignore_errors: yes
+  register: rdrand
+  changed_when: false
+  when: not usehaveged
+
+- name: Check file /dev/hwrng exists example.
+  stat:
+    path: /dev/hwrng
+  register: hwrng
+  when: not usehaveged
+
+- name: Include task list based on the distribution
+  include: redhat.yml
+
+- name: Get java_home path
+  shell: readlink -f /usr/bin/java | sed "s:/bin/java::"
+  register: java_home
+  ignore_errors: yes
+  changed_when: false
+  tags: set_java_home
+
+- name: Set JAVA_HOME
+  template:
+    src: java_home.sh.j2
+    dest: /etc/profile.d/java_home.sh
+    mode: 0644
+  when: java_home is defined and java_home
+  tags: set_java_home

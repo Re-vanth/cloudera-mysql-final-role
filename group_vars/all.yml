@@ -1,0 +1,47 @@
+# To run the tasks with any other user with sudo privileges
+# ansible_user: ansible
+# ansible_become_pass: 'admin'
+
+ansible_become: true
+
+# User Name from where ansible is running
+ansible_control_node_user: hemanth
+
+# Choose from cdh or hdp
+distribution_type: cdh
+
+# mount the disks
+disk1: /dev/vdb
+disk2: /dev/vdc
+
+# Choose from mysql, postgres or embedded
+database_type: mysql
+mysql_root_password: admin
+
+# cdh distribution version configuaration
+cm_version: 6.3.1
+
+# Helper variables for major and minor versions
+cluster_version_cm_major: "{{ cm_version.split('.')[0] }}"
+cluster_version_cm_minor: "{{ cm_version.split('.')[1] }}"
+
+cloudera_archive_protocol: https://
+cloudera_archive: archive.cloudera.com
+
+configs_by_version:
+  "5":
+    scm_repo_url:    "{{ cloudera_archive_protocol }}{{ cloudera_archive }}/cm5/redhat/{{ ansible_distribution_major_version }}/x86_64/cm/{{ cm_version }}/"
+    scm_repo_gpgkey: "{{ cloudera_archive_protocol }}{{ cloudera_archive }}/cm5/redhat/{{ ansible_distribution_major_version }}/x86_64/cm/RPM-GPG-KEY-cloudera"
+    scm_prepare_database_script_path: "/usr/share/cmf/schema/scm_prepare_database.sh"
+  "6":
+    scm_repo_url:    "{{ cloudera_archive_protocol }}{{ cloudera_archive }}/cm6/{{ cm_version }}/redhat{{ ansible_distribution_major_version }}/yum"
+    scm_repo_gpgkey: "{{ cloudera_archive_protocol }}{{ cloudera_archive }}/cm6/{{ cm_version }}/redhat{{ ansible_distribution_major_version }}/yum/RPM-GPG-KEY-cloudera"
+    scm_prepare_database_script_path: "/opt/cloudera/cm/schema/scm_prepare_database.sh"
+
+# CM Server Hostname
+cm_server_hostname: test0.itversity.com
+
+scm_repo_url: "{{ configs_by_version[cluster_version_cm_major].scm_repo_url }}"
+scm_repo_gpgkey: "{{ configs_by_version[cluster_version_cm_major].scm_repo_gpgkey }}"
+scm_prepare_database_script_path: "{{ configs_by_version[cluster_version_cm_major].scm_prepare_database_script_path }}"
+

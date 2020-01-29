@@ -1,0 +1,19 @@
+---
+- name: Getting all the variables
+  include_vars: ../../../group_vars/all.yml
+  include_vars: ../../../group_vars/db.yml
+  ignore_errors: true
+
+- name: Install Cloudera Manager Server DB, Server and openldap-clients (yum)
+  yum: name=cloudera-manager-server-db-2,cloudera-manager-server,openldap-clients update_cache=yes state=present
+  when: ansible_os_family == "RedHat"
+
+- name: setup scm database
+  command: |
+    {{ scm_prepare_database_script_path }}  -f
+    --host {{ cm_server_hostname }}
+    {{ database_type }} {{ databases.scm.name }} {{ databases.scm.user }} {{ databases.scm.pass }}
+  when: database_type == "mysql" 
+
+- name: Enable and Start the cloudera manager server service
+  service: name=cloudera-scm-server state=started enabled=yes

@@ -1,0 +1,13 @@
+---
+- name: nscd is installed
+  service: name=nscd state=started
+
+- name: ntp started
+  command: update-rc.d ntp defaults
+
+- name: Restart rc-local
+  service: name=rc-local state=restarted
+  ignore_errors: yes
+
+- name: update nscd defaults
+  command: update-rc.d nscd defaults
